@@ -1,200 +1,388 @@
-"""Renderiza un reel vertical (1080x1920) de Estado 51 a partir de una lista de escenas.
+"""Renderiza un reel de Estado 51 (1080x1920) con el estilo de los reels publicados.
 
 Uso:
-    python3 herramientas/render_reel.py reels/01-tu-piso-no-es-inversion.json
+    python3 herramientas/render_reel.py reels/01-tu-casa-no-te-paga.json
 
-Cada escena dura [inicio, fin) segundos y contiene elementos que entran animados.
-Tipos de elemento:
-    texto  -> texto grande en mayúsculas; las palabras entre *asteriscos* van en naranja
-    fila   -> concepto a la izquierda y cifra a la derecha (la cifra cuenta hacia arriba)
-    total  -> cifra grande en naranja dentro de una placa
-    nota   -> texto pequeño (avisos, "ejemplo ilustrativo")
-El vídeo sale sin voz: lleva una pista de audio en silencio para que Instagram lo acepte.
+Estructura del JSON (rutas relativas a la raíz del repo):
+    fase      etiqueta de arriba a la izquierda, p. ej. "M · MAPEA"
+    gancho    {"texto": ..., "fondo": opcional}
+    bloques   lista de 6 {"texto": ..., "fondo": opcional}; el contador va de 01 / 06 a 06 / 06
+    cierre    {"texto": ...}
+    audio     opcional: voz de Tony (wav/mp3/m4a). Sin audio, el vídeo lleva silencio.
+    tiempos   opcional: JSON con [{"palabra", "inicio", "fin"}] en el mismo orden que el texto.
+              Sin tiempos, se estiman a partir de la longitud de cada palabra.
+    imagenes  opcional: {"retrato", "avatar", "placa", "logo"} para sustituir los provisionales.
+
+"fondo" puede ser una imagen (zoom lento) o un vídeo. Sin fondo se usa la textura tinta.
+Ver guiones/estilo-reels.md para el detalle del estilo.
 """
 
 import json
-import math
+import random
 import subprocess
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
+RAIZ = Path(__file__).resolve().parent.parent
 W, H, FPS = 1080, 1920, 30
 MARGEN = 90
 
-FONDO_A = (20, 17, 15)
-FONDO_B = (44, 33, 27)
-BLANCO = (245, 240, 233)
-GRIS = (170, 160, 150)
-NARANJA = (217, 98, 43)
+TERRACOTA = (176, 83, 50)
+TINTA = (34, 31, 29)
+CAL = (250, 240, 232)
+ARCILLA = (240, 214, 198)
+ACERO = (176, 180, 182)
 
-FUENTES = "/usr/share/fonts/opentype/inter/"
+FUENTES = RAIZ / "herramientas" / "fuentes"
+TITULAR = str(FUENTES / "ArchivoBlack-Regular.ttf")
+MONO = str(FUENTES / "IBMPlexMono-Medium.ttf")
+MONO_REG = str(FUENTES / "IBMPlexMono-Regular.ttf")
 
+IMAGENES = {
+    "retrato": "provisional/tony_retrato_arco.png",
+    "avatar": "provisional/tony_avatar.png",
+    "placa": "provisional/placa51.png",
+    "logo": "provisional/logo_estado51.png",
+}
 
-def fuente(peso, tam):
-    return ImageFont.truetype(FUENTES + f"InterDisplay-{peso}.otf", tam)
-
-
-def ease(x):
-    x = max(0.0, min(1.0, x))
-    return 1 - (1 - x) ** 3
-
-
-def fondo():
-    img = Image.new("RGB", (W, H))
-    d = ImageDraw.Draw(img)
-    for y in range(H):
-        k = y / H
-        d.line([(0, y), (W, y)], fill=tuple(int(a + (b - a) * k) for a, b in zip(FONDO_A, FONDO_B)))
-    # Líneas verticales que sugieren fachadas y arquitectura.
-    capa = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    dc = ImageDraw.Draw(capa)
-    for i, x in enumerate(range(60, W, 140)):
-        alto = 700 + (i * 173) % 600
-        dc.rectangle([x, H - alto, x + 90, H], outline=(255, 255, 255, 14), width=2)
-        for v in range(H - alto + 40, H, 70):
-            dc.rectangle([x + 20, v, x + 40, v + 30], fill=(255, 255, 255, 8))
-            dc.rectangle([x + 52, v, x + 72, v + 30], fill=(255, 255, 255, 8))
-    img.paste(capa, (0, 0), capa)
-    # Viñeta.
-    vin = Image.new("L", (W, H), 0)
-    ImageDraw.Draw(vin).ellipse([-300, -200, W + 300, H + 200], fill=255)
-    vin = vin.filter(ImageFilter.GaussianBlur(200))
-    oscuro = Image.new("RGB", (W, H), (8, 6, 5))
-    return Image.composite(img, oscuro, vin)
+NBSP = " "
+TAM_SUBTITULO = 98
+TAM_GANCHO = 80
+TAM_CIERRE = 80
+CENTRO_SUBTITULO = 1170
+ANCHO_SUBTITULO = 800  # deja libre el icono de Instagram de la izquierda
 
 
-def cabecera(img, pilar):
-    d = ImageDraw.Draw(img)
-    f = fuente("Bold", 34)
-    d.rounded_rectangle([MARGEN, 110, MARGEN + d.textlength(pilar, font=f) + 44, 172], 31, outline=NARANJA, width=3)
-    d.text((MARGEN + 22, 141), pilar, font=f, fill=BLANCO, anchor="lm")
-    # Placa "51".
-    x0 = W - MARGEN - 110
-    d.rounded_rectangle([x0, 96, x0 + 110, 186], 18, fill=NARANJA)
-    d.text((x0 + 55, 141), "51", font=fuente("Black", 58), fill=FONDO_A, anchor="mm")
+def f(ruta, tam):
+    return ImageFont.truetype(ruta, tam)
 
 
-def partir(palabras, f, ancho, d):
-    lineas, actual = [], []
-    for p in palabras:
-        prueba = " ".join(w.strip("*") for w in actual + [p])
-        if actual and d.textlength(prueba, font=f) > ancho:
-            lineas.append(actual)
-            actual = [p]
+# ---------- fondos ----------
+
+def textura_tinta(semilla=51):
+    random.seed(semilla)
+    ruido = Image.effect_noise((W // 2, H // 2), 22).resize((W, H), Image.BILINEAR)
+    base = Image.new("RGB", (W, H), TINTA)
+    claro = Image.new("RGB", (W, H), (58, 53, 49))
+    return Image.composite(claro, base, ruido.point(lambda v: max(0, v - 110) * 2))
+
+
+def cubrir(img, escala=1.0):
+    r = max(W / img.width, H / img.height) * escala
+    img = img.resize((int(img.width * r) + 1, int(img.height * r) + 1), Image.LANCZOS)
+    x, y = (img.width - W) // 2, (img.height - H) // 2
+    return img.crop((x, y, x + W, y + H))
+
+
+class Fondo:
+    """Devuelve el fotograma de fondo de un tramo, ya oscurecido para que se lea el texto."""
+
+    def __init__(self, ruta, duracion, desenfoque=0):
+        self.duracion = duracion
+        self.video = None
+        self.imagen = None
+        self.velo = Image.new("RGB", (W, H), TINTA)
+        if ruta is None:
+            self.fijo = textura_tinta()
+            return
+        ruta = RAIZ / ruta
+        if ruta.suffix.lower() in (".mp4", ".mov", ".m4v", ".webm"):
+            self.video = subprocess.Popen(
+                ["ffmpeg", "-loglevel", "error", "-stream_loop", "-1", "-i", str(ruta),
+                 "-vf", f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS}",
+                 "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                stdout=subprocess.PIPE,
+            )
         else:
-            actual.append(p)
+            img = Image.open(ruta).convert("RGB")
+            if desenfoque:
+                img = img.filter(ImageFilter.GaussianBlur(desenfoque))
+            self.imagen = img
+
+    def fotograma(self, t):
+        if self.video:
+            img = Image.frombytes("RGB", (W, H), self.video.stdout.read(W * H * 3))
+        elif self.imagen:
+            img = cubrir(self.imagen, 1.0 + 0.08 * t / max(self.duracion, 0.1))
+        else:
+            return self.fijo.copy()
+        return Image.blend(img, self.velo, 0.45)
+
+    def cerrar(self):
+        if self.video:
+            self.video.kill()
+
+
+# ---------- tiempos ----------
+
+def palabras(texto):
+    texto = texto.replace("EE. UU.", "EE." + NBSP + "UU.")
+    for simbolo in ("$", "%", "€"):
+        texto = texto.replace(" " + simbolo, NBSP + simbolo)
+    return [p for p in texto.split(" ") if p]  # split() sin argumento también corta en NBSP
+
+
+def estimar_tiempos(tramos):
+    t, tiempos = 0.3, []
+    for tramo in tramos:
+        for p in tramo:
+            dur = 0.17 + 0.037 * len(p)
+            tiempos.append((t, t + dur))
+            t += dur
+            if p[-1] in ".:;?!»":
+                t += 0.3
+            elif p[-1] == ",":
+                t += 0.15
+        t += 0.3
+    return tiempos
+
+
+# ---------- piezas fijas ----------
+
+def texto_espaciado(d, xy, texto, fuente, color, espacio, anchor_derecha=False):
+    ancho = sum(d.textlength(c, font=fuente) + espacio for c in texto) - espacio
+    x, y = xy
+    if anchor_derecha:
+        x -= ancho
+    for c in texto:
+        d.text((x, y), c, font=fuente, fill=color)
+        x += d.textlength(c, font=fuente) + espacio
+
+
+def etiqueta_fase(d, fase):
+    texto_espaciado(d, (MARGEN, 290), fase.upper(), f(MONO, 32), CAL, 5)
+    d.rectangle([MARGEN, 338, MARGEN + 62, 342], fill=TERRACOTA)
+
+
+def contador(d, n):
+    texto_espaciado(d, (W - MARGEN, 290), f"{n:02d} / 06", f(MONO_REG, 32), CAL, 4, anchor_derecha=True)
+
+
+def icono_instagram(d, cx, cy, lado, color=CAL, grosor=5):
+    m = lado / 2
+    d.rounded_rectangle([cx - m, cy - m, cx + m, cy + m], radius=lado * 0.28, outline=color, width=grosor)
+    r = lado * 0.22
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=color, width=grosor)
+    p = lado * 0.06
+    d.ellipse([cx + m * 0.55 - p, cy - m * 0.55 - p, cx + m * 0.55 + p, cy - m * 0.55 + p], fill=color)
+
+
+def instagram_lateral(d):
+    icono_instagram(d, 112, 1104, 58)
+    d.text((84, 1150), "@MI.ESTADO51", font=f(MONO, 22), fill=CAL)
+
+
+def recorte_circular(img, diametro):
+    img = cubrir_cuadrado(img, diametro)
+    mascara = Image.new("L", (diametro * 4, diametro * 4), 0)
+    ImageDraw.Draw(mascara).ellipse([0, 0, diametro * 4, diametro * 4], fill=255)
+    return img, mascara.resize((diametro, diametro), Image.LANCZOS)
+
+
+def cubrir_cuadrado(img, lado):
+    r = lado / min(img.size)
+    img = img.resize((int(img.width * r) + 1, int(img.height * r) + 1), Image.LANCZOS)
+    x, y = (img.width - lado) // 2, (img.height - lado) // 2
+    return img.crop((x, y, x + lado, y + lado))
+
+
+def pegar_avatar(frame, avatar, cx, cy, diametro, anillo):
+    img, mascara = recorte_circular(avatar, diametro)
+    d = ImageDraw.Draw(frame)
+    r = diametro // 2
+    if anillo == TERRACOTA:
+        d.ellipse([cx - r - 14, cy - r - 14, cx + r + 14, cy + r + 14], outline=(110, 55, 36), width=3)
+    d.ellipse([cx - r - 6, cy - r - 6, cx + r + 6, cy + r + 6], fill=anillo)
+    frame.paste(img, (cx - r, cy - r), mascara)
+
+
+def pegar_retrato_arco(frame, retrato):
+    x0, y0, x1, y1 = 270, 408, 810, 1083
+    ancho, alto = x1 - x0, y1 - y0
+    mascara = Image.new("L", (ancho * 2, alto * 2), 0)
+    dm = ImageDraw.Draw(mascara)
+    dm.ellipse([0, 0, ancho * 2, ancho * 2], fill=255)
+    dm.rounded_rectangle([0, ancho, ancho * 2, alto * 2], radius=40, fill=255)
+    mascara = mascara.resize((ancho, alto), Image.LANCZOS)
+    r = max(ancho / retrato.width, alto / retrato.height)
+    img = retrato.resize((int(retrato.width * r) + 1, int(retrato.height * r) + 1), Image.LANCZOS)
+    img = img.crop((0, 0, ancho, alto))
+    frame.paste(img, (x0, y0), mascara)
+    contorno = ImageChops.subtract(mascara, mascara.filter(ImageFilter.MinFilter(9)))
+    frame.paste(Image.new("RGB", (ancho, alto), CAL), (x0, y0), contorno)
+
+
+# ---------- subtítulos ----------
+
+def partir_lineas(ps, fuente, ancho_max, d, max_palabras=3):
+    lineas, actual = [], []
+    for i, p in enumerate(ps):
+        prueba = " ".join(ps[j] for j in actual + [i])
+        if actual and (d.textlength(prueba, font=fuente) > ancho_max or len(actual) >= max_palabras):
+            lineas.append(actual)
+            actual = [i]
+        else:
+            actual.append(i)
     if actual:
         lineas.append(actual)
     return lineas
 
 
-def dibujar_texto(d, el, y, alpha):
-    tam = el.get("tam", 104)
-    f = fuente("Black" if tam >= 80 else "Bold", tam)
-    color_base = BLANCO if el.get("color") != "gris" else GRIS
-    lineas = partir(el["texto"].split(), f, W - 2 * MARGEN, d)
-    alto_linea = int(tam * 1.12)
-    for i, linea in enumerate(lineas):
-        limpio = [w.strip("*") for w in linea]
-        total = d.textlength(" ".join(limpio), font=f)
-        x = (W - total) / 2
-        for w, original in zip(limpio, linea):
-            color = NARANJA if original.startswith("*") else color_base
-            d.text((x, y + i * alto_linea), w, font=f, fill=color + (alpha,))
-            x += d.textlength(w + " ", font=f)
-    return len(lineas) * alto_linea
+def paginas(ps, fuente, d):
+    """Agrupa las palabras en páginas de 2 líneas, sin mezclar frases distintas en una página."""
+    frases, actual = [], []
+    for i, p in enumerate(ps):
+        actual.append(i)
+        if p[-1] in ".:;?!":
+            frases.append(actual)
+            actual = []
+    if actual:
+        frases.append(actual)
+    resultado = []
+    for frase in frases:
+        lineas = partir_lineas([ps[i] for i in frase], fuente, ANCHO_SUBTITULO, d)
+        lineas = [[frase[j] for j in linea] for linea in lineas]
+        resultado += [lineas[i:i + 2] for i in range(0, len(lineas), 2)]
+    return resultado
 
 
-def cifra(valor, p, formato):
-    return formato.format(valor * p).replace(",", "X").replace(".", ",").replace("X", ".")
+def dibujar_lineas(frame, ps, lineas, activa, fuente, y_centro, alineado="centro",
+                   caja=TERRACOTA, texto_caja=CAL, interlineado=1.08):
+    d = ImageDraw.Draw(frame)
+    tam = fuente.size
+    alto_linea = int(tam * interlineado)
+    y = y_centro - alto_linea * len(lineas) / 2
+    espacio = d.textlength(" ", font=fuente)
+    for linea in lineas:
+        textos = [ps[i].replace(NBSP, " ") for i in linea]
+        total = sum(d.textlength(t, font=fuente) for t in textos) + espacio * (len(textos) - 1)
+        x = MARGEN if alineado == "izquierda" else (W - total) / 2
+        for i, t in zip(linea, textos):
+            ancho = d.textlength(t, font=fuente)
+            color = CAL
+            if i == activa:
+                d.rounded_rectangle([x - 14, y + tam * 0.02, x + ancho + 14, y + tam * 1.02], radius=10, fill=caja)
+                color = texto_caja
+            d.text((x, y), t, font=fuente, fill=color)
+            x += ancho + espacio
+        y += alto_linea
 
 
-def dibujar_elemento(capa, el, y, t_local):
-    p = ease((t_local - el.get("en", 0)) / 0.4)
-    if p <= 0:
-        return el.get("alto", 0)
-    alpha = int(255 * p)
-    dy = int((1 - p) * 40)
-    d = ImageDraw.Draw(capa)
-    tipo = el["tipo"]
-    if tipo == "texto":
-        return dibujar_texto(d, el, y + dy, alpha)
-    if tipo == "nota":
-        f = fuente("Medium", el.get("tam", 40))
-        d.text((W / 2, y + dy), el["texto"], font=f, fill=GRIS + (alpha,), anchor="ma")
-        return int(el.get("tam", 40) * 1.6)
-    if tipo == "fila":
-        f = fuente("Bold", 58)
-        signo = el.get("signo", "")
-        color = NARANJA if signo == "+" else BLANCO
-        conteo = ease((t_local - el.get("en", 0)) / 1.0)
-        d.text((MARGEN, y + dy), el["texto"], font=f, fill=BLANCO + (alpha,))
-        valor = signo + cifra(el["valor"], conteo, el.get("formato", "{:,.0f} $"))
-        d.text((W - MARGEN, y + dy), valor, font=f, fill=color + (alpha,), anchor="ra")
-        d.line([(MARGEN, y + dy + 92), (W - MARGEN, y + dy + 92)], fill=(255, 255, 255, int(40 * p)), width=2)
-        return 120
-    if tipo == "total":
-        f = fuente("Black", el.get("tam", 150))
-        conteo = ease((t_local - el.get("en", 0)) / 1.0)
-        texto = cifra(el["valor"], conteo, el.get("formato", "+{:,.0f} $"))
-        escala = 0.85 + 0.15 * p
-        ancho = d.textlength(texto, font=f) * escala + 120
-        alto = el.get("tam", 150) * 1.5
-        x0 = (W - ancho) / 2
-        d.rounded_rectangle([x0, y, x0 + ancho, y + alto], 36, fill=NARANJA + (alpha,))
-        fs = fuente("Black", int(el.get("tam", 150) * escala))
-        d.text((W / 2, y + alto / 2), texto, font=fs, fill=FONDO_A + (alpha,), anchor="mm")
-        return int(alto + 40)
-    if tipo == "espacio":
-        return el["alto"]
-    raise ValueError(f"Tipo desconocido: {tipo}")
+def activa_en(tiempos, t):
+    for i, (ini, fin) in enumerate(tiempos):
+        siguiente = tiempos[i + 1][0] if i + 1 < len(tiempos) else fin + 0.4
+        if ini <= t < siguiente:
+            return i
+    return None
 
 
-def render(ruta):
-    reel = json.loads(Path(ruta).read_text(encoding="utf-8"))
-    duracion = max(e["fin"] for e in reel["escenas"])
-    base = fondo()
-    cabecera(base, reel["pilar"])
-    salida = Path(ruta).with_suffix(".mp4")
+# ---------- render ----------
+
+def render(ruta_json):
+    ruta_json = Path(ruta_json)
+    reel = json.loads(ruta_json.read_text(encoding="utf-8"))
+    imagenes = {k: Image.open(RAIZ / v).convert("RGB") for k, v in {**IMAGENES, **reel.get("imagenes", {})}.items()}
+
+    tramos = [reel["gancho"]] + reel["bloques"] + [reel["cierre"]]
+    textos = [palabras(tr["texto"].upper()) for tr in tramos]
+    if reel.get("tiempos"):
+        datos = json.loads((RAIZ / reel["tiempos"]).read_text(encoding="utf-8"))
+        tiempos = [(p["inicio"], p["fin"]) for p in datos]
+    else:
+        tiempos = estimar_tiempos(textos)
+    assert len(tiempos) == sum(map(len, textos)), "Los tiempos no cuadran con el número de palabras"
+
+    # Tiempos por tramo y límites de cada tramo.
+    por_tramo, k = [], 0
+    for ps in textos:
+        por_tramo.append(tiempos[k:k + len(ps)])
+        k += len(ps)
+    inicios = [0.0] + [pt[0][0] - 0.1 for pt in por_tramo[1:]]
+    fin_voz = tiempos[-1][1]
+    fin_cierre = fin_voz + 1.6
+    duracion = fin_cierre + 2.4
+    finales = inicios[1:] + [fin_cierre]
+
+    d_medida = ImageDraw.Draw(Image.new("RGB", (10, 10)))
+    f_sub, f_gancho, f_cierre = f(TITULAR, TAM_SUBTITULO), f(TITULAR, TAM_GANCHO), f(TITULAR, TAM_CIERRE)
+
+    salida = ruta_json.with_suffix(".mp4")
+    audio = ["-i", str(RAIZ / reel["audio"])] if reel.get("audio") else ["-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo"]
     ff = subprocess.Popen(
         ["ffmpeg", "-y", "-loglevel", "error",
-         "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
-         "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
-         "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
-         "-c:a", "aac", "-shortest", "-movflags", "+faststart", str(salida)],
+         "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", *audio,
+         "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+         "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-t", f"{duracion:.2f}",
+         "-movflags", "+faststart", str(salida)],
         stdin=subprocess.PIPE,
     )
+
+    fondo_tinta = textura_tinta()
+    fondos = {}
     for n in range(int(duracion * FPS)):
         t = n / FPS
-        frame = base.copy().convert("RGBA")
-        for esc in reel["escenas"]:
-            if not esc["inicio"] <= t < esc["fin"]:
-                continue
-            t_local = t - esc["inicio"]
-            capa = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-            alturas = []
-            # Primera pasada en una capa descartable para medir y centrar en vertical.
-            medida = Image.new("RGBA", (W, H))
-            for el in esc["elementos"]:
-                alturas.append(dibujar_elemento(medida, dict(el, en=-10), 0, 0) + el.get("despues", 30))
-            y = esc.get("y", (H - sum(alturas)) / 2 + 60)
-            for el, alto in zip(esc["elementos"], alturas):
-                dibujar_elemento(capa, el, y, t_local)
-                y += alto
-            # Salida suave al final de la escena.
-            resto = esc["fin"] - t
-            if resto < 0.25 and esc["fin"] < duracion:
-                capa.putalpha(capa.getchannel("A").point(lambda a: int(a * resto / 0.25)))
-            frame.alpha_composite(capa)
-        # Barra de progreso fina abajo.
+        tramo = next((i for i in range(len(tramos)) if inicios[i] <= t < finales[i]), None)
+
+        if tramo is None:  # pantalla final de Instagram
+            frame = fondo_tinta.copy()
+            p = min(1.0, (t - fin_cierre) / 0.5)
+            frame = Image.blend(frame, Image.new("RGB", (W, H), (8, 7, 6)), 0.6 + 0.3 * p)
+            d = ImageDraw.Draw(frame)
+            icono_instagram(d, W // 2, 900, 150, grosor=12)
+            d.text((W // 2, 1010), "@MI.ESTADO51", font=f(MONO, 40), fill=CAL, anchor="ma")
+            ff.stdin.write(frame.tobytes())
+            continue
+
+        es_cierre = tramo == len(tramos) - 1
+        if tramo not in fondos:
+            for viejo in fondos.values():
+                viejo.cerrar()
+            ruta_fondo = tramos[tramo].get("fondo")
+            if tramo == 0 and ruta_fondo is None:
+                ruta_fondo = reel.get("fondo_gancho")
+            fondos = {tramo: Fondo(None if es_cierre else ruta_fondo, finales[tramo] - inicios[tramo],
+                                   desenfoque=12 if tramo == 0 else 0)}
+        frame = fondos[tramo].fotograma(t - inicios[tramo])
         d = ImageDraw.Draw(frame)
-        d.rectangle([0, H - 10, int(W * t / duracion), H], fill=NARANJA)
-        ff.stdin.write(frame.convert("RGB").tobytes())
+        etiqueta_fase(d, reel["fase"])
+
+        ps, pt = textos[tramo], por_tramo[tramo]
+        activa = activa_en(pt, t)
+
+        if tramo == 0:
+            frame.paste(imagenes["placa"].resize((130, 103), Image.LANCZOS), (W - MARGEN - 130, 272))
+            icono_instagram(d, W - MARGEN - 22, 505, 54)
+            pegar_retrato_arco(frame, imagenes["retrato"])
+            lineas = partir_lineas(ps, f_gancho, W - 2 * MARGEN, d_medida, max_palabras=8)
+            dibujar_lineas(frame, ps, lineas, activa, f_gancho, 1150 + len(lineas) * TAM_GANCHO * 0.54,
+                           alineado="izquierda")
+        elif es_cierre:
+            pegar_avatar(frame, imagenes["avatar"], W // 2, 510, 290, CAL)
+            lineas = partir_lineas(ps, f_cierre, W - 2 * MARGEN - 60, d_medida, max_palabras=8)
+            dibujar_lineas(frame, ps, lineas, activa, f_cierre, 1060, caja=ARCILLA, texto_caja=TINTA)
+            instagram_lateral(d)
+            logo = imagenes["logo"]
+            frame.paste(logo, ((W - logo.width) // 2, 1450))
+        else:
+            contador(d, tramo)
+            instagram_lateral(d)
+            pags = paginas(ps, f_sub, d_medida)
+            # Página visible: la que contiene la palabra activa (o la primera antes de empezar).
+            idx = activa if activa is not None else 0
+            pagina = next(pg for pg in pags if any(idx in linea for linea in pg))
+            dibujar_lineas(frame, ps, pagina, activa, f_sub, CENTRO_SUBTITULO)
+            pegar_avatar(frame, imagenes["avatar"], 168, 1444, 168, TERRACOTA)
+            d.text((290, 1444), "TONY", font=f(MONO, 30), fill=CAL, anchor="lm")
+
+        ff.stdin.write(frame.tobytes())
+
+    for viejo in fondos.values():
+        viejo.cerrar()
     ff.stdin.close()
     ff.wait()
-    print(salida)
+    print(f"{salida}  ({duracion:.1f} s)")
 
 
 if __name__ == "__main__":

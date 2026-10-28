@@ -24,6 +24,11 @@ Sacado de un reel publicado («Te prometen un 20 % con un alquiler normal», 41 
 ## Audio
 - La voz de Tony va en off durante todo el vídeo. Los subtítulos siguen la voz.
 
-## Diferencias con BRAND.md (pendiente de decidir)
-- BRAND.md dice que la cuenta va «sin caras y sin personaje», pero los reels usan a Tony y b-roll con personas.
-- BRAND.md fija el rótulo del reel en 36–48 px, pero los reels publicados lo usan mucho más grande.
+## Decisiones (28/10/2026)
+- **Tony se queda**: voz en off, retrato en arco y avatar, aunque `BRAND.md` dice «sin caras y sin personaje».
+- **Tamaño de subtítulos**: se copia el de los reels publicados (unos 100 px a 1080 de ancho), no el 36–48 px de `BRAND.md` 7.3.
+- **Guiones**: reescritos según `BRAND.md` (sin «invertir/inversión», sin «Comenta PALABRA»).
+
+## Cómo se genera
+`python3 herramientas/render_reel.py reels/<reel>.json` (ver la cabecera del script para el formato del JSON).
+Mientras no lleguen los originales, se usan recortes provisionales de un reel publicado (`provisional/`) y fondo tinta.
