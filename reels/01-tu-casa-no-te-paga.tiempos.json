@@ -1,0 +1,447 @@
+[
+{
+"palabra": "Tu",
+"inicio": 0.3,
+"fin": 0.469
+},
+{
+"palabra": "casa",
+"inicio": 0.469,
+"fin": 0.722
+},
+{
+"palabra": "no",
+"inicio": 0.722,
+"fin": 0.891
+},
+{
+"palabra": "te",
+"inicio": 0.891,
+"fin": 1.06
+},
+{
+"palabra": "paga",
+"inicio": 1.06,
+"fin": 1.313
+},
+{
+"palabra": "cada",
+"inicio": 1.313,
+"fin": 1.566
+},
+{
+"palabra": "mes.",
+"inicio": 1.566,
+"fin": 1.82
+},
+{
+"palabra": "Te",
+"inicio": 2.04,
+"fin": 2.205
+},
+{
+"palabra": "cuesta.",
+"inicio": 2.205,
+"fin": 2.579
+},
+{
+"palabra": "Y",
+"inicio": 2.799,
+"fin": 2.919
+},
+{
+"palabra": "te",
+"inicio": 2.919,
+"fin": 3.08
+},
+{
+"palabra": "lo",
+"inicio": 3.08,
+"fin": 3.241
+},
+{
+"palabra": "enseño",
+"inicio": 3.241,
+"fin": 3.562
+},
+{
+"palabra": "con",
+"inicio": 3.562,
+"fin": 3.763
+},
+{
+"palabra": "números.",
+"inicio": 3.763,
+"fin": 4.165
+},
+{
+"palabra": "Lo",
+"inicio": 4.615,
+"fin": 4.787
+},
+{
+"palabra": "que",
+"inicio": 4.787,
+"fin": 5.003
+},
+{
+"palabra": "compras",
+"inicio": 5.003,
+"fin": 5.391
+},
+{
+"palabra": "para",
+"inicio": 5.391,
+"fin": 5.65
+},
+{
+"palabra": "vivir",
+"inicio": 5.65,
+"fin": 5.952
+},
+{
+"palabra": "te",
+"inicio": 5.952,
+"fin": 6.125
+},
+{
+"palabra": "saca",
+"inicio": 6.125,
+"fin": 6.384
+},
+{
+"palabra": "dinero",
+"inicio": 6.384,
+"fin": 6.729
+},
+{
+"palabra": "todos",
+"inicio": 6.729,
+"fin": 7.031
+},
+{
+"palabra": "los",
+"inicio": 7.031,
+"fin": 7.246
+},
+{
+"palabra": "meses.",
+"inicio": 7.246,
+"fin": 7.591
+},
+{
+"palabra": "Hipoteca,",
+"inicio": 8.041,
+"fin": 8.57
+},
+{
+"palabra": "comunidad,",
+"inicio": 8.57,
+"fin": 9.146
+},
+{
+"palabra": "IBI,",
+"inicio": 9.146,
+"fin": 9.434
+},
+{
+"palabra": "seguro",
+"inicio": 9.434,
+"fin": 9.819
+},
+{
+"palabra": "y",
+"inicio": 9.819,
+"fin": 9.963
+},
+{
+"palabra": "alguna",
+"inicio": 9.963,
+"fin": 10.347
+},
+{
+"palabra": "reforma.",
+"inicio": 10.347,
+"fin": 10.827
+},
+{
+"palabra": "Ahora",
+"inicio": 11.277,
+"fin": 11.629
+},
+{
+"palabra": "mira",
+"inicio": 11.629,
+"fin": 11.93
+},
+{
+"palabra": "una",
+"inicio": 11.93,
+"fin": 12.181
+},
+{
+"palabra": "casa",
+"inicio": 12.181,
+"fin": 12.483
+},
+{
+"palabra": "alquilada",
+"inicio": 12.483,
+"fin": 13.035
+},
+{
+"palabra": "en",
+"inicio": 13.035,
+"fin": 13.236
+},
+{
+"palabra": "una",
+"inicio": 13.236,
+"fin": 13.487
+},
+{
+"palabra": "ciudad",
+"inicio": 13.487,
+"fin": 13.889
+},
+{
+"palabra": "media",
+"inicio": 13.889,
+"fin": 14.241
+},
+{
+"palabra": "de",
+"inicio": 14.241,
+"fin": 14.442
+},
+{
+"palabra": "EE. UU.",
+"inicio": 14.442,
+"fin": 14.894
+},
+{
+"palabra": "Renta:",
+"inicio": 15.344,
+"fin": 15.899
+},
+{
+"palabra": "1.400 $.",
+"inicio": 16.119,
+"fin": 17.525
+},
+{
+"palabra": "Hipoteca",
+"inicio": 17.745,
+"fin": 18.29
+},
+{
+"palabra": "y",
+"inicio": 18.29,
+"fin": 18.454
+},
+{
+"palabra": "gastos:",
+"inicio": 18.454,
+"fin": 18.945
+},
+{
+"palabra": "1.150 $.",
+"inicio": 19.165,
+"fin": 20.639
+},
+{
+"palabra": "Te",
+"inicio": 21.089,
+"fin": 21.26
+},
+{
+"palabra": "quedan",
+"inicio": 21.26,
+"fin": 21.602
+},
+{
+"palabra": "250 $",
+"inicio": 21.602,
+"fin": 22.887
+},
+{
+"palabra": "al",
+"inicio": 22.887,
+"fin": 23.058
+},
+{
+"palabra": "mes.",
+"inicio": 23.058,
+"fin": 23.315
+},
+{
+"palabra": "Y",
+"inicio": 23.535,
+"fin": 23.676
+},
+{
+"palabra": "los",
+"inicio": 23.676,
+"fin": 23.912
+},
+{
+"palabra": "paga",
+"inicio": 23.912,
+"fin": 24.195
+},
+{
+"palabra": "tu",
+"inicio": 24.195,
+"fin": 24.383
+},
+{
+"palabra": "inquilino.",
+"inicio": 24.383,
+"fin": 24.949
+},
+{
+"palabra": "No",
+"inicio": 25.399,
+"fin": 25.544
+},
+{
+"palabra": "digo",
+"inicio": 25.544,
+"fin": 25.76
+},
+{
+"palabra": "que",
+"inicio": 25.76,
+"fin": 25.941
+},
+{
+"palabra": "no",
+"inicio": 25.941,
+"fin": 26.085
+},
+{
+"palabra": "compres",
+"inicio": 26.085,
+"fin": 26.41
+},
+{
+"palabra": "tu",
+"inicio": 26.41,
+"fin": 26.554
+},
+{
+"palabra": "casa.",
+"inicio": 26.554,
+"fin": 26.807
+},
+{
+"palabra": "Primero,",
+"inicio": 27.027,
+"fin": 27.417
+},
+{
+"palabra": "lo",
+"inicio": 27.417,
+"fin": 27.573
+},
+{
+"palabra": "que",
+"inicio": 27.573,
+"fin": 27.767
+},
+{
+"palabra": "te",
+"inicio": 27.767,
+"fin": 27.923
+},
+{
+"palabra": "paga.",
+"inicio": 27.923,
+"fin": 28.196
+},
+{
+"palabra": "Luego,",
+"inicio": 28.416,
+"fin": 28.725
+},
+{
+"palabra": "lo",
+"inicio": 28.725,
+"fin": 28.879
+},
+{
+"palabra": "que",
+"inicio": 28.879,
+"fin": 29.072
+},
+{
+"palabra": "te",
+"inicio": 29.072,
+"fin": 29.226
+},
+{
+"palabra": "gusta.",
+"inicio": 29.226,
+"fin": 29.534
+},
+{
+"palabra": "Guarda",
+"inicio": 29.984,
+"fin": 30.308
+},
+{
+"palabra": "este",
+"inicio": 30.308,
+"fin": 30.552
+},
+{
+"palabra": "reel",
+"inicio": 30.552,
+"fin": 30.795
+},
+{
+"palabra": "y",
+"inicio": 30.795,
+"fin": 30.916
+},
+{
+"palabra": "síguenos",
+"inicio": 30.916,
+"fin": 31.322
+},
+{
+"palabra": "si",
+"inicio": 31.322,
+"fin": 31.484
+},
+{
+"palabra": "prefieres",
+"inicio": 31.484,
+"fin": 31.93
+},
+{
+"palabra": "los",
+"inicio": 31.93,
+"fin": 32.133
+},
+{
+"palabra": "números",
+"inicio": 32.133,
+"fin": 32.497
+},
+{
+"palabra": "a",
+"inicio": 32.497,
+"fin": 32.619
+},
+{
+"palabra": "las",
+"inicio": 32.619,
+"fin": 32.822
+},
+{
+"palabra": "promesas.",
+"inicio": 32.822,
+"fin": 33.268
+}
+]

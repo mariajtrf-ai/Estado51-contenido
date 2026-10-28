@@ -13,7 +13,8 @@ Estructura del JSON (rutas relativas a la raíz del repo):
               Sin tiempos, se estiman a partir de la longitud de cada palabra.
     imagenes  opcional: {"retrato", "avatar", "placa", "logo"} para sustituir los provisionales.
 
-"fondo" puede ser una imagen (zoom lento) o un vídeo. Sin fondo se usa la textura tinta.
+"fondo" puede ser "mixkit:<id>" (se descarga solo, ver herramientas/broll.py), una imagen
+(zoom lento) o un vídeo. Sin fondo se usa la textura tinta.
 Ver guiones/estilo-reels.md para el detalle del estilo.
 """
 
@@ -24,6 +25,9 @@ import sys
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+
+import broll
+import voz
 
 RAIZ = Path(__file__).resolve().parent.parent
 W, H, FPS = 1080, 1920, 30
@@ -87,11 +91,12 @@ class Fondo:
         if ruta is None:
             self.fijo = textura_tinta()
             return
-        ruta = RAIZ / ruta
+        ruta = broll.resolver(ruta)
         if ruta.suffix.lower() in (".mp4", ".mov", ".m4v", ".webm"):
+            desenfocar = f",gblur=sigma={desenfoque * 2}" if desenfoque else ""
             self.video = subprocess.Popen(
                 ["ffmpeg", "-loglevel", "error", "-stream_loop", "-1", "-i", str(ruta),
-                 "-vf", f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS}",
+                 "-vf", f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS}{desenfocar}",
                  "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
                 stdout=subprocess.PIPE,
             )
@@ -284,6 +289,12 @@ def render(ruta_json):
     ruta_json = Path(ruta_json)
     reel = json.loads(ruta_json.read_text(encoding="utf-8"))
     imagenes = {k: Image.open(RAIZ / v).convert("RGB") for k, v in {**IMAGENES, **reel.get("imagenes", {})}.items()}
+
+    if reel.get("voz") == "provisional" and not reel.get("audio"):
+        base = ruta_json.with_suffix("")
+        reel["audio"], reel["tiempos"] = f"{base}.voz.wav", f"{base}.tiempos.json"
+        if not (RAIZ / reel["tiempos"]).exists():
+            voz.generar(ruta_json)
 
     tramos = [reel["gancho"]] + reel["bloques"] + [reel["cierre"]]
     textos = [palabras(tr["texto"].upper()) for tr in tramos]

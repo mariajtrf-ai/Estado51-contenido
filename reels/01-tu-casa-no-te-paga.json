@@ -1,15 +1,38 @@
 {
   "titulo": "01 · Tu casa no te paga: te cuesta",
   "fase": "M · MAPEA",
-  "fondo_gancho": "provisional/fondo_gancho.png",
-  "gancho": {"texto": "Tu casa no te paga cada mes. Te cuesta. Y te lo enseño con números."},
+  "gancho": {
+    "texto": "Tu casa no te paga cada mes. Te cuesta. Y te lo enseño con números.",
+    "fondo": "mixkit:47014"
+  },
   "bloques": [
-    {"texto": "Lo que compras para vivir te saca dinero todos los meses."},
-    {"texto": "Hipoteca, comunidad, IBI, seguro y alguna reforma."},
-    {"texto": "Ahora mira una casa alquilada en una ciudad media de EE. UU."},
-    {"texto": "Renta: 1.400 $. Hipoteca y gastos: 1.150 $."},
-    {"texto": "Te quedan 250 $ al mes. Y los paga tu inquilino."},
-    {"texto": "No digo que no compres tu casa. Primero, lo que te paga. Luego, lo que te gusta."}
+    {
+      "texto": "Lo que compras para vivir te saca dinero todos los meses.",
+      "fondo": "mixkit:2457"
+    },
+    {
+      "texto": "Hipoteca, comunidad, IBI, seguro y alguna reforma.",
+      "fondo": "mixkit:46994"
+    },
+    {
+      "texto": "Ahora mira una casa alquilada en una ciudad media de EE. UU.",
+      "fondo": "mixkit:48394"
+    },
+    {
+      "texto": "Renta: 1.400 $. Hipoteca y gastos: 1.150 $.",
+      "fondo": "mixkit:47007"
+    },
+    {
+      "texto": "Te quedan 250 $ al mes. Y los paga tu inquilino.",
+      "fondo": "mixkit:3420"
+    },
+    {
+      "texto": "No digo que no compres tu casa. Primero, lo que te paga. Luego, lo que te gusta.",
+      "fondo": "mixkit:15064"
+    }
   ],
-  "cierre": {"texto": "Guarda este reel y síguenos si prefieres los números a las promesas."}
+  "cierre": {
+    "texto": "Guarda este reel y síguenos si prefieres los números a las promesas."
+  },
+  "voz": "provisional"
 }
