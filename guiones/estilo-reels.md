@@ -16,7 +16,7 @@ Sacado de un reel publicado («Te prometen un 20 % con un alquiler normal», 41 
 
 ## Subtítulos
 - Van palabra a palabra al ritmo de la voz: 2 líneas de 2–4 palabras, centradas.
-- Usan Archivo Black en mayúsculas, color cal, grandes (unos 70–80 px a 1080 de ancho).
+- Usan Archivo Black en mayúsculas, color cal, grandes (unos 100 px a 1080 de ancho).
 - La palabra que se está diciendo va sobre una caja terracota con las esquinas un poco redondeadas.
 - En el cierre, la caja de la palabra activa pasa a arcilla con el texto en tinta.
 - Sobre el b-roll hay una capa oscura (tinta) para que se lea el texto.
